@@ -1,18 +1,22 @@
 use embedded_graphics::prelude::*;
 use embedded_graphics::primitives::rectangle::Rectangle;
 use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::style::PrimitiveStyleBuilder;
+use embedded_graphics::style::{PrimitiveStyleBuilder, TextStyle};
+use embedded_graphics::fonts::{Font8x16, Text};
 
+use embedded_hal::prelude::*;
+use gpio_cdev::{Chip, LineRequestFlags};
+use linux_embedded_hal::spidev::{SpiModeFlags, SpidevOptions};
+use linux_embedded_hal::{CdevPin, Delay, I2cdev, Spidev};
+
+use bme280::BME280;
 use st7735_lcd::{Orientation, ST7735};
 
-use gpio_cdev::{Chip, LineRequestFlags};
-
-use linux_embedded_hal::spidev::{SpiModeFlags, SpidevOptions};
-use linux_embedded_hal::sysfs_gpio::Direction;
-use linux_embedded_hal::Delay;
-use linux_embedded_hal::{CdevPin, Spidev};
-
 fn main() {
+    let i2c_bus = I2cdev::new("/dev/i2c-1").expect("i2c bus");
+    let mut bme280 = BME280::new_primary(i2c_bus, Delay);
+    bme280.init().expect("bme280 init");
+
     let mut spi = Spidev::open("/dev/spidev0.1").expect("SPI device");
     let options = SpidevOptions::new()
         .bits_per_word(8)
@@ -48,13 +52,23 @@ fn main() {
     let mut display = ST7735::new(spi, dc, reset, false, true, 160, 80);
     display.init(&mut delay).unwrap();
     display.set_orientation(&Orientation::Landscape).unwrap();
-
-    let style = PrimitiveStyleBuilder::new().fill_color(Rgb565::GREEN).build();
-    let black_backdrop = Rectangle::new(Point::new(0, 0), Point::new(160, 80)).into_styled(style);
     display.set_offset(0, 25);
-    black_backdrop.draw(&mut display).unwrap();
+
+    let bg_style = PrimitiveStyleBuilder::new().fill_color(Rgb565::BLACK).build();
+    let text_style = TextStyle::new(Font8x16, Rgb565::WHITE);
+    let black_backdrop = Rectangle::new(Point::new(0, 0), Point::new(160, 80)).into_styled(bg_style);
 
     loop {
-        continue;
+        black_backdrop.draw(&mut display).unwrap();
+        if let Ok(measurements) = bme280.measure() {
+            let tmp = format!("Temp: {:.1}°", measurements.temperature);
+            println!("Temp: {:.3}°", measurements.temperature);
+            let t = Text::new(&tmp, Point::new(0, 0))
+                .into_styled(text_style);
+            t.draw(&mut display).unwrap();
+        } else {
+            println!("Could not grab temperature!");
+        }
+        delay.delay_ms(1000u16);
     }
 }

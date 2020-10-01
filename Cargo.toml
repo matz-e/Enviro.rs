@@ -5,7 +5,9 @@ authors = ["Matthias Wolf <m@sushinara.net>"]
 edition = "2018"
 
 [dependencies]
+bme280 = "0.2.1"
 embedded-graphics = "0.6"
+embedded-hal = "*"
 gpio-cdev = "*"
 st7735-lcd = "0.7"
 profont = "0.3.0"
