@@ -1,0 +1,16 @@
+[package]
+name = "enviro"
+version = "0.1.0"
+authors = ["Matthias Wolf <m@sushinara.net>"]
+edition = "2018"
+
+[dependencies]
+embedded-graphics = "0.6"
+gpio-cdev = "*"
+st7735-lcd = "0.7"
+profont = "0.3.0"
+
+[dependencies.linux-embedded-hal]
+version = "0.3"
+features = ["gpio_cdev"]
+git = "https://github.com/rust-embedded/linux-embedded-hal.git"
