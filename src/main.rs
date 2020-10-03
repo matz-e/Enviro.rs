@@ -51,7 +51,7 @@ fn main() {
 
     let mut display = ST7735::new(spi, dc, reset, false, true, 160, 80);
     display.init(&mut delay).unwrap();
-    display.set_orientation(&Orientation::Landscape).unwrap();
+    display.set_orientation(&Orientation::LandscapeSwapped).unwrap();
     display.set_offset(0, 25);
 
     let bg_style = PrimitiveStyleBuilder::new().fill_color(Rgb565::BLACK).build();
