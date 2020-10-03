@@ -57,15 +57,16 @@ fn main() {
     let bg_style = PrimitiveStyleBuilder::new().fill_color(Rgb565::BLACK).build();
     let text_style = TextStyle::new(Font8x16, Rgb565::WHITE);
     let black_backdrop = Rectangle::new(Point::new(0, 0), Point::new(160, 80)).into_styled(bg_style);
+    black_backdrop.draw(&mut display).unwrap();
 
     loop {
-        black_backdrop.draw(&mut display).unwrap();
         if let Ok(measurements) = bme280.measure() {
             let tmp = format!("Temp: {:.1}°", measurements.temperature);
             println!("Temp: {:.3}°", measurements.temperature);
-            let t = Text::new(&tmp, Point::new(0, 0))
-                .into_styled(text_style);
-            t.draw(&mut display).unwrap();
+            let area = Rectangle::new(Point::new(0,0), Point::new(160, 16)).into_styled(bg_style);
+            let text = Text::new(&tmp, Point::new(0, 0)).into_styled(text_style);
+            area.draw(&mut display).unwrap();
+            text.draw(&mut display).unwrap();
         } else {
             println!("Could not grab temperature!");
         }
