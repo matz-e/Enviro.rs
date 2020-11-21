@@ -11,8 +11,13 @@ embedded-hal = "*"
 gpio-cdev = "*"
 st7735-lcd = "0.7"
 profont = "0.3.0"
+serialport = "3.3.0"
 
 [dependencies.linux-embedded-hal]
 version = "0.3"
 features = ["gpio_cdev"]
 git = "https://github.com/rust-embedded/linux-embedded-hal.git"
+
+[dependencies.pms5003]
+git = "https://github.com/matz-e/pms5003.rs.git"
+branch = "main"
