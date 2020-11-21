@@ -16,10 +16,16 @@ use bme280::BME280;
 use pms5003::PMS5003;
 use st7735_lcd::{Orientation, ST7735};
 
+use systemstat::{Platform, System};
+
+const TEMP_FACTOR: f32 = 2.25;
+
 fn main() {
     let i2c_bus = I2cdev::new("/dev/i2c-1").expect("i2c bus");
     let mut bme280 = BME280::new_primary(i2c_bus, Delay);
     bme280.init().expect("bme280 init");
+
+    let sys = System::new();
 
     let mut spi = Spidev::open("/dev/spidev0.1").expect("SPI device");
     let options = SpidevOptions::new()
@@ -92,28 +98,29 @@ fn main() {
     let mut temp = String::from("N/A");
     let mut pm25 = String::from("N/A");
 
-    egrectangle!(
-        top_left = (0, 0),
-        bottom_right = (64, 32),
-        style = bg_style
-    )
-    .into_iter()
-    .chain(&egtext!(
-        text = "Temp:   N/A",
-        top_left = (0, 0),
-        style = text_style
-    ))
-    .chain(&egtext!(
-        text = "PM 2.5: N/A",
-        top_left = (0, 16),
-        style = text_style
-    ))
-    .draw(&mut display)
-    .unwrap();
+    egrectangle!(top_left = (0, 0), bottom_right = (64, 32), style = bg_style)
+        .into_iter()
+        .chain(&egtext!(
+            text = "Temp:   N/A",
+            top_left = (0, 0),
+            style = text_style
+        ))
+        .chain(&egtext!(
+            text = "PM 2.5: N/A",
+            top_left = (0, 16),
+            style = text_style
+        ))
+        .draw(&mut display)
+        .unwrap();
 
     loop {
         if let Ok(measurements) = bme280.measure() {
-            temp = format!("{:.1}°", measurements.temperature);
+            let mut temperature = measurements.temperature;
+            if let Ok(cpu_temp) = sys.cpu_temp() {
+                println!("Raw T:  {:.1}°\nCPU T:  {:.1}°", temperature, cpu_temp);
+                temperature -= (cpu_temp - temperature) / TEMP_FACTOR;
+            }
+            temp = format!("{:.1}°", temperature);
         } else {
             println!("Failed to read BME280, recycling old temperature value!");
         }

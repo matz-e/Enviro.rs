@@ -12,6 +12,7 @@ gpio-cdev = "*"
 st7735-lcd = "0.7"
 profont = "0.3.0"
 serialport = "3.3.0"
+systemstat = "0.1.6"
 
 [dependencies.linux-embedded-hal]
 version = "0.3"
