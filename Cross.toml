@@ -1,0 +1,2 @@
+[target.arm-unknown-linux-gnueabihf]
+image = "matz0xe/cross-pi0"
