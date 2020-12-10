@@ -6,10 +6,10 @@ edition = "2018"
 
 [dependencies]
 bme280 = "0.2.1"
-embedded-graphics = "0.6"
+embedded-graphics = "0.7.0-alpha.2"
 embedded-hal = "*"
 gpio-cdev = "*"
-st7735-lcd = "0.7"
+st7735-lcd = "0.8.0-alpha.1"
 profont = "0.3.0"
 serialport = "3.3.0"
 systemstat = "0.1.6"

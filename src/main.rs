@@ -1,8 +1,7 @@
-use embedded_graphics::fonts::Font8x16;
+use embedded_graphics::fonts::{Font8x16, Text};
 use embedded_graphics::pixelcolor::Rgb565;
 use embedded_graphics::prelude::*;
-use embedded_graphics::style::{PrimitiveStyleBuilder, TextStyle};
-use embedded_graphics::{egrectangle, egtext};
+use embedded_graphics::style::{PrimitiveStyleBuilder, MonoTextStyle};
 
 use embedded_hal::digital::v2::OutputPin;
 use linux_embedded_hal::Serial;
@@ -78,15 +77,12 @@ fn main() {
     display
         .set_orientation(&Orientation::LandscapeSwapped)
         .unwrap();
+    display.set_offset(0, 25);
     display
         .clear(Rgb565::BLACK)
         .expect("Failed to clear display");
-    display.set_offset(0, 25);
 
-    let bg_style = PrimitiveStyleBuilder::new()
-        .fill_color(Rgb565::BLACK)
-        .build();
-    let text_style = TextStyle::new(Font8x16, Rgb565::WHITE);
+    let text_style = MonoTextStyle::new(Font8x16, Rgb565::WHITE);
 
     pms_dc.set_high().unwrap();
     pms_reset.set_high().unwrap();
@@ -98,21 +94,6 @@ fn main() {
     let mut temp = String::from("N/A");
     let mut pm25 = String::from("N/A");
 
-    egrectangle!(top_left = (0, 0), bottom_right = (64, 32), style = bg_style)
-        .into_iter()
-        .chain(&egtext!(
-            text = "Temp:   N/A",
-            top_left = (0, 0),
-            style = text_style
-        ))
-        .chain(&egtext!(
-            text = "PM 2.5: N/A",
-            top_left = (0, 16),
-            style = text_style
-        ))
-        .draw(&mut display)
-        .unwrap();
-
     loop {
         if let Ok(measurements) = bme280.measure() {
             let mut temperature = measurements.temperature;
@@ -120,34 +101,30 @@ fn main() {
                 println!("Raw T:  {:.1}°\nCPU T:  {:.1}°", temperature, cpu_temp);
                 temperature -= (cpu_temp - temperature) / TEMP_FACTOR;
             }
-            temp = format!("{:.1}°", temperature);
+            temp = format!("Temp:   {:.1}°", temperature);
         } else {
             println!("Failed to read BME280, recycling old temperature value!");
         }
         if let Ok(measurements) = pms5003.measure() {
-            pm25 = format!("{:.1} µg/m³", measurements.ug_per_m3.pm2p5);
+            pm25 = format!("PM 2.5: {:.1} µg/m³", measurements.ug_per_m3.pm2p5);
         } else {
             println!("Failed to read PMS5003, recycling old particle values!");
         }
-        println!("Temp:   {}\nPM 2.5: {}", temp, pm25);
-        egrectangle!(
-            top_left = (64, 0),
-            bottom_right = (160, 32),
-            style = bg_style
-        )
-        .into_iter()
-        .chain(&egtext!(
-            text = &temp,
-            top_left = (64, 0),
-            style = text_style
-        ))
-        .chain(&egtext!(
-            text = &pm25,
-            top_left = (64, 16),
-            style = text_style
-        ))
-        .draw(&mut display)
-        .unwrap();
+        println!("{}\n{}", temp, pm25);
+        display
+            .clear(Rgb565::BLACK)
+            .expect("Failed to clear display");
+        Text::new(&temp, Point::new(0, 0))
+            .into_styled(text_style)
+            .into_pixels()
+            .into_iter()
+            .chain(
+                Text::new(&pm25, Point::new(0, 16))
+                    .into_styled(text_style)
+                    .into_pixels(),
+            )
+            .draw(&mut display)
+            .unwrap();
         delay.delay_ms(3000u16);
     }
 }
