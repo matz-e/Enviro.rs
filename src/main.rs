@@ -25,6 +25,9 @@ use systemstat::{Platform, System};
 // From measurements @ 24⁰C:
 const TEMP_FACTOR: f32 = 1.4;
 
+// In milliseconds
+const REFRESH_DELAY: u16 = 10000;
+
 fn main() {
     let i2c_bus = I2cdev::new("/dev/i2c-1").expect("i2c bus");
     let mut bme280 = BME280::new_primary(i2c_bus, Delay);
@@ -100,6 +103,7 @@ fn main() {
     let mut pms5003 = PMS5003::new(pms_tty, pms_dc, pms_reset, Delay);
     pms5003.init().unwrap();
 
+    let mut humi = String::from("N/A");
     let mut temp = String::from("N/A");
     let mut pm25 = String::from("N/A");
     let mut pm10 = String::from("N/A");
@@ -111,7 +115,8 @@ fn main() {
                 println!("Raw T:  {:.1}°\nCPU T:  {:.1}°", temperature, cpu_temp);
                 temperature -= (cpu_temp - temperature) / TEMP_FACTOR;
             }
-            temp = format!("Temp:   {:.1}°", temperature);
+            temp = format!("T:      {:.1}°", temperature);
+            humi = format!("RH:     {:.1}%", measurements.humidity);
         } else {
             println!("Failed to read BME280, recycling old temperature value!");
         }
@@ -121,7 +126,7 @@ fn main() {
         } else {
             println!("Failed to read PMS5003, recycling old particle values!");
         }
-        let text = format!("{}\n{}\n{}", temp, pm25, pm10);
+        let text = format!("{}\n{}\n{}\n{}", temp, humi, pm25, pm10);
         println!("{}", text);
         display
             .clear(Rgb565::BLACK)
@@ -134,6 +139,6 @@ fn main() {
         )
         .draw(&mut display)
         .unwrap();
-        delay.delay_ms(3000u16);
+        delay.delay_ms(REFRESH_DELAY);
     }
 }
