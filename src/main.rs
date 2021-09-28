@@ -1,7 +1,10 @@
-use embedded_graphics::fonts::{Font8x16, Text};
-use embedded_graphics::pixelcolor::Rgb565;
-use embedded_graphics::prelude::*;
-use embedded_graphics::style::{PrimitiveStyleBuilder, MonoTextStyle};
+use embedded_graphics::{
+    mono_font::MonoTextStyle,
+    pixelcolor::Rgb565,
+    prelude::*,
+    text::{Baseline, Text, TextStyleBuilder},
+};
+use profont::PROFONT_10_POINT;
 
 use embedded_hal::digital::v2::OutputPin;
 use linux_embedded_hal::Serial;
@@ -17,7 +20,10 @@ use st7735_lcd::{Orientation, ST7735};
 
 use systemstat::{Platform, System};
 
-const TEMP_FACTOR: f32 = 2.25;
+// From Pimoroni:
+// const TEMP_FACTOR: f32 = 2.25;
+// From measurements @ 24⁰C:
+const TEMP_FACTOR: f32 = 1.4;
 
 fn main() {
     let i2c_bus = I2cdev::new("/dev/i2c-1").expect("i2c bus");
@@ -77,12 +83,15 @@ fn main() {
     display
         .set_orientation(&Orientation::LandscapeSwapped)
         .unwrap();
-    display.set_offset(0, 25);
     display
         .clear(Rgb565::BLACK)
         .expect("Failed to clear display");
+    display.set_offset(0, 25);
 
-    let text_style = MonoTextStyle::new(Font8x16, Rgb565::WHITE);
+    let character_style = MonoTextStyle::new(&PROFONT_10_POINT, Rgb565::WHITE);
+    let text_style = TextStyleBuilder::new()
+        .baseline(Baseline::Top)
+        .build();
 
     pms_dc.set_high().unwrap();
     pms_reset.set_high().unwrap();
@@ -93,6 +102,7 @@ fn main() {
 
     let mut temp = String::from("N/A");
     let mut pm25 = String::from("N/A");
+    let mut pm10 = String::from("N/A");
 
     loop {
         if let Ok(measurements) = bme280.measure() {
@@ -106,25 +116,24 @@ fn main() {
             println!("Failed to read BME280, recycling old temperature value!");
         }
         if let Ok(measurements) = pms5003.measure() {
-            pm25 = format!("PM 2.5: {:.1} µg/m³", measurements.ug_per_m3.pm2p5);
+            pm25 = format!("PM 2.5: {:2} µg/m³", measurements.ug_per_m3.pm2p5);
+            pm10 = format!("PM 10:  {:2} µg/m³", measurements.ug_per_m3.pm10p0);
         } else {
             println!("Failed to read PMS5003, recycling old particle values!");
         }
-        println!("{}\n{}", temp, pm25);
+        let text = format!("{}\n{}\n{}", temp, pm25, pm10);
+        println!("{}", text);
         display
             .clear(Rgb565::BLACK)
             .expect("Failed to clear display");
-        Text::new(&temp, Point::new(0, 0))
-            .into_styled(text_style)
-            .into_pixels()
-            .into_iter()
-            .chain(
-                Text::new(&pm25, Point::new(0, 16))
-                    .into_styled(text_style)
-                    .into_pixels(),
-            )
-            .draw(&mut display)
-            .unwrap();
+        Text::with_text_style(
+            &text,
+            Point::new(2, 2),
+            character_style,
+            text_style,
+        )
+        .draw(&mut display)
+        .unwrap();
         delay.delay_ms(3000u16);
     }
 }
